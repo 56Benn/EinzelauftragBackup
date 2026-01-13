@@ -1,6 +1,10 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
+/**
+ * Card-Komponenten: Wiederverwendbare Card-Komponenten für konsistentes Design
+ * Card, CardHeader, CardTitle, CardContent, CardFooter
+ */
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { variant?: string }

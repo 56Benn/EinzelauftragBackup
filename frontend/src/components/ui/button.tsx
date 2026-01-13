@@ -2,6 +2,10 @@ import * as React from "react"
 import { Button as BootstrapButton, ButtonProps as BootstrapButtonProps } from 'react-bootstrap'
 import { cn } from "@/lib/utils"
 
+/**
+ * Button: Wrapper um Bootstrap Button mit Custom-Varianten
+ * Mappt Custom-Varianten (default, destructive, etc.) zu Bootstrap-Varianten
+ */
 export interface ButtonProps extends Omit<BootstrapButtonProps, 'variant' | 'size'> {
   asChild?: boolean
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | string

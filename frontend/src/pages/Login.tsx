@@ -1,23 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Eye, EyeOff, User } from 'lucide-react';
-// Quick login removed - using backend API
-import { User as UserType } from '@/types';
+import { Eye, EyeOff } from 'lucide-react';
 import { Container, Form, Alert, InputGroup } from 'react-bootstrap';
 
+/**
+ * Login-Komponente: Authentifizierungsseite für Schüler und Lehrer
+ * Ermöglicht Login mit E-Mail und Passwort über das Backend
+ */
 export default function Login() {
+  // State für Formular-Felder
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false); // Toggle für Passwort-Sichtbarkeit
+  const [error, setError] = useState(''); // Fehlermeldung bei Login-Fehlern
+  const { login } = useAuth(); // Login-Funktion aus Auth-Context
+  const navigate = useNavigate(); // Navigation nach erfolgreichem Login
 
+  /**
+   * handleSubmit: Verarbeitet das Login-Formular
+   * Ruft die Login-API auf und leitet bei Erfolg zur Startseite weiter
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -33,18 +40,6 @@ export default function Login() {
       const errorMessage = error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten';
       setError(errorMessage);
       console.error('Login error:', error);
-    }
-  };
-
-  const handleQuickLogin = async (user: UserType) => {
-    setEmail(user.email);
-    setPassword(user.password);
-    setError('');
-    const success = await login(user.email, user.password);
-    if (success) {
-      navigate('/');
-    } else {
-      setError('Ungültige E-Mail oder Passwort');
     }
   };
 

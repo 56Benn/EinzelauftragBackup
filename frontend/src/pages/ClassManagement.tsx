@@ -19,16 +19,20 @@ import { useNavigate } from 'react-router-dom';
 
 type TabType = 'students' | 'requests';
 
+/**
+ * ClassManagement: Verwaltung der Klasse für Lehrer
+ * Ermöglicht Hinzufügen/Entfernen von Schülern und Bearbeitung von Klassenanfragen
+ */
 export default function ClassManagement() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabType>('students');
-  const [classMembers, setClassMembers] = useState<User[]>([]);
-  const [allStudents, setAllStudents] = useState<User[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [requests, setRequests] = useState<any[]>([]);
-  const [studentPoints, setStudentPoints] = useState<Record<string, number>>({});
+  const [activeTab, setActiveTab] = useState<TabType>('students'); // Tab: Schüler oder Anfragen
+  const [classMembers, setClassMembers] = useState<User[]>([]); // Schüler in der Klasse
+  const [allStudents, setAllStudents] = useState<User[]>([]); // Alle verfügbaren Schüler
+  const [searchQuery, setSearchQuery] = useState(''); // Suchfeld für Schüler
+  const [showAddModal, setShowAddModal] = useState(false); // Modal zum Hinzufügen von Schülern
+  const [requests, setRequests] = useState<any[]>([]); // Klassenanfragen von Schülern
+  const [studentPoints, setStudentPoints] = useState<Record<string, number>>({}); // Gesamtpunkte pro Schüler
 
   useEffect(() => {
     if (user) {
@@ -138,9 +142,15 @@ export default function ClassManagement() {
     }
   };
 
+  // Filter: Zeige nur Schüler die noch nicht in der Klasse sind UND die Suchanfrage matchen
   const filteredStudents = allStudents.filter(s => {
+    // some(): Prüft ob mindestens ein Klassenmitglied diese ID hat
+    // Wenn ja, verstecke diesen Schüler (ist bereits in Klasse)
     if (classMembers.some(m => m.id === s.id)) return false;
+    // Konvertiere Suchanfrage zu Kleinbuchstaben für case-insensitive Suche
     const query = searchQuery.toLowerCase();
+    // includes(): Prüft ob String den Suchtext enthält
+    // Suche in Name ODER E-Mail
     return s.username.toLowerCase().includes(query) || 
            s.email.toLowerCase().includes(query);
   });
@@ -297,11 +307,15 @@ export default function ClassManagement() {
                   </TableHeader>
                   <TableBody>
                     {classMembers
+                      // Map: Füge Gesamtpunkte zu jedem Schüler hinzu
+                      // ...student: Spread-Operator kopiert alle Eigenschaften des Schülers
                       .map(student => ({
                         ...student,
-                        totalPoints: studentPoints[student.id] || 0
+                        totalPoints: studentPoints[student.id] || 0 // Fallback 0 falls keine Punkte
                       }))
+                      // Sort: Sortiere nach Punkten absteigend (beste zuerst)
                       .sort((a, b) => b.totalPoints - a.totalPoints)
+                      // Map: Rendere jeden Schüler als Tabellenzeile
                       .map((student) => (
                         <TableRow key={student.id} className="hover:bg-slate-50">
                           <TableCell className="py-3">

@@ -2,6 +2,9 @@ import * as React from "react"
 import { Form } from 'react-bootstrap'
 import { cn } from "@/lib/utils"
 
+/**
+ * Select: Wrapper um Bootstrap Form.Select mit Custom-Styling
+ */
 export interface SelectProps
   extends React.SelectHTMLAttributes<HTMLSelectElement> {}
 

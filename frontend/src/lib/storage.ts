@@ -154,23 +154,26 @@ export function getExams(): Exam[] {
   
   // Auto-close exams after 5 days from exam date
   const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  let hasUpdates = false;
+  now.setHours(0, 0, 0, 0); // Setze Zeit auf Mitternacht für reine Datums-Vergleiche
+  let hasUpdates = false; // Flag: Wurden Prüfungen automatisch geschlossen?
   
   exams.forEach((exam: Exam) => {
     if (!exam.isClosed) {
       const examDate = new Date(exam.date);
-      examDate.setHours(0, 0, 0, 0);
+      examDate.setHours(0, 0, 0, 0); // Setze auch Prüfungsdatum auf Mitternacht
+      // Berechne Tage seit Prüfung: Differenz in ms / ms pro Tag
       const daysSinceExam = Math.floor((now.getTime() - examDate.getTime()) / (1000 * 60 * 60 * 24));
       
       if (daysSinceExam >= 5) {
         exam.isClosed = true;
+        // || (OR): Verwende bestehendes closedAt oder setze aktuelles Datum
         exam.closedAt = exam.closedAt || new Date().toISOString();
-        hasUpdates = true;
+        hasUpdates = true; // Markiere dass wir speichern müssen
       }
     }
   });
   
+  // Speichere nur wenn Änderungen vorgenommen wurden (Performance-Optimierung)
   if (hasUpdates) {
     localStorage.setItem(STORAGE_KEYS.EXAMS, JSON.stringify(exams));
   }
@@ -180,16 +183,19 @@ export function getExams(): Exam[] {
 
 export function getExamById(id: string): Exam | null {
   const exams = getExams();
+  // find(): Gibt erstes Element zurück das Bedingung erfüllt, oder undefined
+  // || null: Konvertiere undefined zu null für konsistenten Rückgabetyp
   return exams.find(e => e.id === id) || null;
 }
 
 export function saveExam(exam: Exam) {
   const exams = getExams();
+  // findIndex(): Gibt Index zurück wenn gefunden, sonst -1
   const index = exams.findIndex(e => e.id === exam.id);
   
   // Set closedAt timestamp when manually closed
   if (exam.isClosed && !exam.closedAt) {
-    exam.closedAt = new Date().toISOString();
+    exam.closedAt = new Date().toISOString(); // ISO-Format: "2025-01-15T10:30:00.000Z"
   }
   
   // Auto-close if 5 days have passed since exam date
@@ -206,10 +212,11 @@ export function saveExam(exam: Exam) {
     }
   }
   
+  // Update bestehende Prüfung oder füge neue hinzu
   if (index >= 0) {
-    exams[index] = exam;
+    exams[index] = exam; // Ersetze bestehende Prüfung
   } else {
-    exams.push(exam);
+    exams.push(exam); // Füge neue Prüfung hinzu
   }
   localStorage.setItem(STORAGE_KEYS.EXAMS, JSON.stringify(exams));
   // Add subject if it doesn't exist

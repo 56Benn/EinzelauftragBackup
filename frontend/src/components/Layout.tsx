@@ -9,12 +9,16 @@ interface LayoutProps {
   children: ReactNode;
 }
 
+/**
+ * Layout: Wrapper-Komponente mit Navigation und Header
+ * Wird für alle geschützten Seiten verwendet
+ */
 export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
-  const location = useLocation();
+  const location = useLocation(); // Aktuelle Route für aktive Navigation
   const navigate = useNavigate();
   const navbarRef = useRef<HTMLDivElement>(null);
-  const [navbarHeight, setNavbarHeight] = useState(80);
+  const [navbarHeight, setNavbarHeight] = useState(80); // Höhe der Navbar für Content-Offset
 
   const handleLogout = () => {
     logout();
@@ -23,6 +27,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Misst Navbar-Höhe dynamisch (wichtig für Content-Offset bei fixierter Navbar)
   useEffect(() => {
     const updateNavbarHeight = () => {
       if (navbarRef.current) {
@@ -33,17 +38,14 @@ export default function Layout({ children }: LayoutProps) {
       }
     };
     
-    // Initial measurement after render with multiple attempts
+    // Mehrfache Messungen für zuverlässige Höhe (auch nach Mobile-Toggle)
     const timeout1 = setTimeout(updateNavbarHeight, 0);
     const timeout2 = setTimeout(updateNavbarHeight, 100);
-    const raf = requestAnimationFrame(() => {
-      updateNavbarHeight();
-    });
+    const raf = requestAnimationFrame(updateNavbarHeight);
     
-    // Also update on window resize
     window.addEventListener('resize', updateNavbarHeight);
     
-    // Use MutationObserver to detect when navbar content changes (e.g., on mobile toggle)
+    // MutationObserver erkennt Änderungen an der Navbar (z.B. Mobile-Menü)
     let observer: MutationObserver | null = null;
     if (navbarRef.current) {
       observer = new MutationObserver(updateNavbarHeight);
@@ -68,6 +70,7 @@ export default function Layout({ children }: LayoutProps) {
 
   if (!user) return null;
 
+  // Navigation-Items je nach Benutzerrolle
   const studentNavItems = [
     { path: '/', label: 'Aktuelle Prüfungen', icon: ClipboardList },
     { path: '/leaderboard', label: 'Bestenliste', icon: Trophy },

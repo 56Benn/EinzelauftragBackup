@@ -2,6 +2,10 @@ import * as React from "react"
 import { Table as BootstrapTable } from 'react-bootstrap'
 import { cn } from "@/lib/utils"
 
+/**
+ * Table-Komponenten: Wrapper um Bootstrap Table mit Custom-Styling
+ * Table, TableHeader, TableBody, TableRow, TableHead, TableCell
+ */
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement> & { striped?: boolean; bordered?: boolean; hover?: boolean; responsive?: boolean | string }

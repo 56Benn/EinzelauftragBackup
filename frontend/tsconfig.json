@@ -1,27 +1,27 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2020", // Kompilierungsziel: ECMAScript 2020
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"], // Verfügbare APIs
+    "module": "ESNext", // Modul-System: ES Modules
+    "skipLibCheck": true, // Überspringe Type-Checking für node_modules
 
     /* Bundler mode */
-    "moduleResolution": "bundler",
+    "moduleResolution": "bundler", // Modul-Auflösung für Vite
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
+    "noEmit": true, // Keine JS-Dateien ausgeben (Vite macht das)
+    "jsx": "react-jsx", // React JSX Transform
 
     /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
+    "strict": true, // Strikte Type-Checks
+    "noUnusedLocals": true, // Warnung bei ungenutzten Variablen
+    "noUnusedParameters": true, // Warnung bei ungenutzten Parametern
+    "noFallthroughCasesInSwitch": true, // Warnung bei fehlenden breaks
+    "baseUrl": ".", // Basis-Pfad für Imports
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"] // Pfad-Alias für '@' Imports
     }
   }
 }

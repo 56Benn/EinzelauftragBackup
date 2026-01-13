@@ -5,20 +5,24 @@ import { calculatePredictionPoints } from '@/lib/points';
 import { getExamStatus } from '@/lib/examUtils';
 import { Users, Trophy } from 'lucide-react';
 
+/**
+ * Leaderboard: Zeigt Gesamt-Rangliste aller Schüler über alle Prüfungen
+ */
 export default function Leaderboard() {
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]); // Rangliste mit Gesamtpunkten
 
   useEffect(() => {
     loadLeaderboard();
   }, []);
 
+  // Lädt Rangliste: Berechnet Gesamtpunkte aller Schüler über alle abgeschlossenen Prüfungen
   const loadLeaderboard = async () => {
     try {
       const exams = await api.getAllExams();
       const allUsers = await api.getAllUsers();
       const students = allUsers.filter((u) => u.role === 'student');
       
-      // Load all predictions for all students
+      // Lade alle Vorhersagen aller Schüler
       const allPredictions: any[] = [];
       for (const student of students) {
         try {
@@ -30,17 +34,22 @@ export default function Leaderboard() {
       }
       const predictions = allPredictions;
 
-    // Calculate total points for each student across all exams
+    // Berechne Gesamtpunkte für jeden Schüler über alle Prüfungen
     const studentTotals = students.map((student) => {
       let totalPoints = 0;
 
       exams.forEach((exam) => {
+        // Nur abgeschlossene Prüfungen mit Noten zählen
         if (getExamStatus(exam) === 'closed' && exam.grades) {
           const prediction = predictions.find(
             (p) => p.examId === exam.id && p.studentId === student.id
           );
           if (prediction) {
             const grade = exam.grades[student.id];
+            // ?? (Nullish Coalescing): Verwende links wenn nicht null/undefined, sonst rechts
+            // Erste Priorität: Gespeicherte Punkte (points1), 
+            // Zweite Priorität: Berechne aus Vorhersage und Note,
+            // Fallback: 0 falls beides fehlt
             const points1 = prediction.points1 ?? calculatePredictionPoints(prediction.prediction1, grade) ?? 0;
             const points2 = prediction.points2 ?? calculatePredictionPoints(prediction.prediction2, grade) ?? 0;
             totalPoints += points1 + points2;
@@ -55,8 +64,12 @@ export default function Leaderboard() {
       };
     });
 
+    // Sort: Sortiere nach Gesamtpunkten absteigend (beste zuerst)
+    // b.totalPoints - a.totalPoints: positive Zahl wenn b > a → b kommt vor a
     const sorted = studentTotals
       .sort((a, b) => b.totalPoints - a.totalPoints)
+      // Map: Füge Rang hinzu (index + 1 weil index 0-basiert, Rang 1-basiert)
+      // ...entry: Spread-Operator kopiert alle Eigenschaften, dann fügen wir rank hinzu
       .map((entry, index) => ({
         ...entry,
         rank: index + 1,

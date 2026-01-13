@@ -7,12 +7,16 @@ import { formatGrade } from '@/lib/points';
 import { User } from '@/types';
 import { ArrowLeft, Calendar, BookOpen, Target } from 'lucide-react';
 
+/**
+ * StudentDetail: Detailansicht eines Schülers für Lehrer
+ * Zeigt alle Prüfungsergebnisse und Vorhersagen eines einzelnen Schülers
+ */
 export default function StudentDetail() {
-  const { studentId } = useParams<{ studentId: string }>();
+  const { studentId } = useParams<{ studentId: string }>(); // ID aus URL-Parameter
   const navigate = useNavigate();
   const [student, setStudent] = useState<User | null>(null);
-  const [examResults, setExamResults] = useState<any[]>([]);
-  const [totalPoints, setTotalPoints] = useState(0);
+  const [examResults, setExamResults] = useState<any[]>([]); // Alle Prüfungsergebnisse des Schülers
+  const [totalPoints, setTotalPoints] = useState(0); // Gesamtpunkte des Schülers
 
   useEffect(() => {
     if (studentId) {
@@ -37,12 +41,17 @@ export default function StudentDetail() {
 
     let total = 0;
     const results = exams
+      // Filter: Nur Prüfungen die abgeschlossen sind UND eine Note für diesen Schüler haben
       .filter(exam => exam.isClosed && exam.grades && exam.grades[studentId])
       .map(exam => {
+        // Finde die Vorhersage für diese Prüfung und diesen Schüler
         const prediction = allPredictions.find(p => p.examId === exam.id);
+        // ! (Non-null assertion): Wir wissen dass grades[studentId] existiert wegen Filter oben
         const grade = exam.grades![studentId];
         
+        // Summiere Punkte für Gesamtpunkte-Berechnung
         if (prediction) {
+          // || 0: Fallback falls points1/points2 undefined/null sind
           total += (prediction.points1 || 0) + (prediction.points2 || 0);
         }
 
@@ -52,12 +61,16 @@ export default function StudentDetail() {
           examSubject: exam.subject,
           examDate: exam.date,
           grade,
+          // ?. (Optional Chaining): Nur zugreifen wenn prediction existiert, sonst undefined
           prediction1: prediction?.prediction1,
           prediction2: prediction?.prediction2,
           points1: prediction?.points1,
           points2: prediction?.points2,
         };
       })
+      // Sort: Sortiere nach Datum absteigend (neueste zuerst)
+      // getTime() gibt Millisekunden seit 1970 zurück - damit können wir Datum vergleichen
+      // b - a = absteigend (neueste zuerst), a - b wäre aufsteigend (älteste zuerst)
       .sort((a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime());
 
       setExamResults(results);

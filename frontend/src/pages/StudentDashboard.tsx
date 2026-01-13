@@ -11,32 +11,42 @@ import { Exam, Prediction } from '@/types';
 import { Calendar, BookOpen, Users, Target, AlertCircle, CheckCircle2, Clock, X } from 'lucide-react';
 import ClassRequestModal from '@/components/ClassRequestModal';
 
+/**
+ * StudentDashboard: Hauptseite für Schüler
+ * Zeigt Prüfungen, ermöglicht Tipps abzugeben und zeigt Rangliste
+ */
 export default function StudentDashboard() {
   const { user } = useAuth();
+  // State für Prüfungen und Filter
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExam, setSelectedExam] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('Alle');
   const [subjectFilter, setSubjectFilter] = useState<string>('Alle');
   const [subjects, setSubjects] = useState<string[]>([]);
+  // State für Vorhersagen
   const [prediction1, setPrediction1] = useState<number | ''>('');
   const [prediction2, setPrediction2] = useState<number | ''>('');
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  // State für Klassenanfrage-Modal
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [isInClass, setIsInClass] = useState(false);
 
+  // Lade Daten beim Mounten und wenn sich der User ändert
   useEffect(() => {
     checkClassMembership();
     loadData();
   }, [user]);
 
+  // Prüft ob der Schüler in einer Klasse ist (nötig um Tipps abgeben zu können)
   const checkClassMembership = () => {
     if (!user) return;
     const memberships = getClassMembershipsByStudent(user.id);
     const allMemberships = getClassMemberships();
+    // Wenn noch keine Memberships existieren, erlaube Tipps (für Initial-Setup)
     const inClass = allMemberships.length === 0 ? true : memberships.length > 0;
     setIsInClass(inClass);
     if (!inClass) {
-      setShowRequestModal(true);
+      setShowRequestModal(true); // Zeige Modal zum Senden einer Klassenanfrage
     }
   };
 
@@ -46,6 +56,7 @@ export default function StudentDashboard() {
     }
   }, [selectedExam, user]);
 
+  // Lädt alle Prüfungen und Vorhersagen vom Backend
   const loadData = async () => {
     try {
       const allExams = await api.getAllExams();
@@ -57,6 +68,7 @@ export default function StudentDashboard() {
       }
       
       loadSubjects();
+      // Wähle automatisch die erste offene Prüfung, falls keine ausgewählt ist
       if (allExams.length > 0 && !selectedExam) {
         const openExams = allExams.filter(e => {
           const status = getExamStatus(e);
@@ -97,10 +109,11 @@ export default function StudentDashboard() {
     }
   };
 
+  // Speichert die Vorhersage (Tipp) eines Schülers für eine Prüfung
   const handleSubmitPrediction = async () => {
     if (!user || !selectedExam) return;
     
-    // Check if student is in a class
+    // Prüfe ob Schüler in einer Klasse ist
     if (!isInClass) {
       setShowRequestModal(true);
       return;
@@ -110,6 +123,7 @@ export default function StudentDashboard() {
     if (!exam || !canSubmitTips(exam)) return;
 
     try {
+      // Lade bestehende Vorhersage oder erstelle neue
       const existingPrediction = await api.getPredictionByExamAndStudent(selectedExam, user.id);
 
       const prediction: Prediction = existingPrediction || {
@@ -117,6 +131,7 @@ export default function StudentDashboard() {
         studentId: user.id,
       };
 
+      // Aktualisiere nur wenn noch nicht gesetzt (verhindert Überschreiben)
       if (prediction1 !== '' && prediction.prediction1 === undefined) {
         prediction.prediction1 = Number(prediction1);
       }
@@ -126,7 +141,7 @@ export default function StudentDashboard() {
 
       await api.createOrUpdatePrediction(selectedExam, user.id, prediction);
       
-      // Reload predictions
+      // Aktualisiere Vorhersagen-Liste
       const updatedPredictions = await api.getPredictionsByStudent(user.id);
       setPredictions(updatedPredictions);
       await loadPrediction();
@@ -136,29 +151,31 @@ export default function StudentDashboard() {
     }
   };
 
-  // Filter exams
+  // Filter und Sortiere Prüfungen basierend auf Status- und Fach-Filter
   const getFilteredAndSortedExams = () => {
     let filtered = exams;
 
-    // Filter by status
+    // Filter nach Status: Prüfe jeden Status einzeln
     if (statusFilter !== 'Alle') {
       filtered = filtered.filter(e => {
         const status = getExamStatus(e);
+        // Vergleiche Filter-String mit tatsächlichem Status
         if (statusFilter === 'Abgeschlossen') return status === 'closed';
         if (statusFilter === 'Tipp offen') return status === 'open';
         if (statusFilter === 'In Auswertung') return status === 'evaluation';
-        return true;
+        return true; // Fallback (sollte nicht erreicht werden)
       });
     }
 
-    // Filter by subject
+    // Filter nach Fach: Nur Prüfungen mit dem gewählten Fach
     if (subjectFilter !== 'Alle') {
       filtered = filtered.filter(e => e.subject === subjectFilter);
     }
 
-    // Separate into open and closed
+    // Trenne in offene und abgeschlossene Prüfungen für separate Anzeige
     const openExams = filtered.filter(e => {
       const status = getExamStatus(e);
+      // Offen = 'open' ODER 'evaluation' (beide erlauben noch Tipps)
       return status === 'open' || status === 'evaluation';
     });
     const closedExams = filtered.filter(e => getExamStatus(e) === 'closed');
@@ -205,10 +222,14 @@ export default function StudentDashboard() {
   
   const allPredictions = examPredictions;
   
+  // Erstelle Rangliste für die ausgewählte Prüfung
   const examLeaderboard = students
     .map((student) => {
+      // Finde Vorhersage dieses Schülers für die aktuelle Prüfung
       const pred = allPredictions.find((p) => p.studentId === student.id);
+      // ?. (Optional Chaining): Zugriff auf grades nur wenn currentExam und grades existieren
       const grade = currentExam?.grades?.[student.id];
+      // ?? (Nullish Coalescing): Verwende points1 wenn vorhanden, sonst berechne, sonst 0
       const points1 = pred?.points1 ?? calculatePredictionPoints(pred?.prediction1, grade) ?? 0;
       const points2 = pred?.points2 ?? calculatePredictionPoints(pred?.prediction2, grade) ?? 0;
       const totalPoints = points1 + points2;
@@ -218,11 +239,17 @@ export default function StudentDashboard() {
         totalPoints,
       };
     })
+    // Filter: Zeige nur Einträge mit Punkten ODER die eine Vorhersage haben
+    // some(): Prüft ob mindestens eine Vorhersage für diesen Schüler existiert
     .filter((entry) => entry.totalPoints > 0 || allPredictions.some(p => p.studentId === entry.studentId))
+    // Sort: Absteigend nach Punkten (beste zuerst)
     .sort((a, b) => b.totalPoints - a.totalPoints);
 
+  // Finde Vorhersage des eingeloggten Users für die aktuelle Prüfung
   const userPrediction = allPredictions.find((p) => p.studentId === user?.id);
+  // ?. (Optional Chaining): Nur zugreifen wenn user existiert
   const userGrade = user ? currentExam?.grades?.[user.id] : undefined;
+  // ?? (Nullish Coalescing): Verwende gespeicherte Punkte oder berechne sie
   const userPoints1 = userPrediction?.points1 ?? calculatePredictionPoints(userPrediction?.prediction1, userGrade);
   const userPoints2 = userPrediction?.points2 ?? calculatePredictionPoints(userPrediction?.prediction2, userGrade);
   const examStatus = currentExam ? getExamStatus(currentExam) : null;

@@ -11,12 +11,17 @@ interface ClassRequestModalProps {
   onClose: () => void;
 }
 
+/**
+ * ClassRequestModal: Modal für Schüler zum Senden einer Klassenanfrage
+ * Wird angezeigt wenn Schüler noch nicht in einer Klasse sind
+ */
 export default function ClassRequestModal({ onClose }: ClassRequestModalProps) {
   const { user } = useAuth();
   const [teacherEmail, setTeacherEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // Sendet eine Anfrage an einen Lehrer, um zur Klasse hinzugefügt zu werden
   const handleSubmit = () => {
     if (!user || !teacherEmail.trim()) {
       setError('Bitte geben Sie eine E-Mail-Adresse ein');
@@ -28,7 +33,7 @@ export default function ClassRequestModal({ onClose }: ClassRequestModalProps) {
       return;
     }
 
-    // Check if request already exists
+    // Prüfe ob bereits eine offene Anfrage existiert
     const existingRequests = getClassRequestsByStudent(user.id);
     const pendingRequest = existingRequests.find(
       r => r.teacherEmail.toLowerCase() === teacherEmail.toLowerCase() && r.status === 'pending'
@@ -39,7 +44,7 @@ export default function ClassRequestModal({ onClose }: ClassRequestModalProps) {
       return;
     }
 
-    // Create request
+    // Erstelle Anfrage
     try {
       createClassRequest(
         user.id,
@@ -50,7 +55,7 @@ export default function ClassRequestModal({ onClose }: ClassRequestModalProps) {
       setSuccess(true);
       setError('');
       setTimeout(() => {
-        onClose();
+        onClose(); // Schließe Modal nach 2 Sekunden
       }, 2000);
     } catch (err) {
       setError('Fehler beim Senden der Anfrage');

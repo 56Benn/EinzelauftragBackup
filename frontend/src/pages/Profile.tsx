@@ -5,9 +5,12 @@ import { api } from '@/lib/apiAdapter';
 import { formatGrade } from '@/lib/points';
 import { Target, Calendar } from 'lucide-react';
 
+/**
+ * Profile: Zeigt persönliche Prüfungsergebnisse und Vorhersagen eines Schülers
+ */
 export default function Profile() {
   const { user } = useAuth();
-  const [examResults, setExamResults] = useState<any[]>([]);
+  const [examResults, setExamResults] = useState<any[]>([]); // Ergebnisse aller abgeschlossenen Prüfungen
 
   useEffect(() => {
     if (user) {
@@ -15,6 +18,7 @@ export default function Profile() {
     }
   }, [user]);
 
+  // Lädt alle Prüfungsergebnisse des eingeloggten Schülers
   const loadExamResults = async () => {
     if (!user) return;
 
@@ -24,6 +28,7 @@ export default function Profile() {
       const allUsers = await api.getAllUsers();
       const students = allUsers.filter((u) => u.role === 'student');
 
+    // Filtere nur abgeschlossene Prüfungen mit Noten für diesen Schüler
     const results = exams
       .filter((exam) => exam.isClosed && exam.grades && exam.grades[user.id])
       .map((exam) => {
@@ -31,17 +36,25 @@ export default function Profile() {
           (p) => p.examId === exam.id && p.studentId === user.id
         );
 
-        // Calculate rank for this exam
+        // Berechne Rang für diese Prüfung (basierend auf Gesamtpunkten aller Schüler)
+        // Filter: Nur Vorhersagen für diese spezifische Prüfung
         const examPredictions = predictions.filter((p) => p.examId === exam.id);
         const examRankings = students
           .map((student) => {
+            // Finde Vorhersage dieses Schülers für diese Prüfung
             const pred = examPredictions.find((p) => p.studentId === student.id);
+            // Berechne Gesamtpunkte: points1 + points2, mit Fallback 0 falls undefined
             const totalPoints = (pred?.points1 || 0) + (pred?.points2 || 0);
             return { studentId: student.id, totalPoints };
           })
+          // Sort: Absteigend nach Punkten (beste zuerst)
+          // b.totalPoints - a.totalPoints: wenn b > a → positive Zahl → b kommt vor a
           .sort((a, b) => b.totalPoints - a.totalPoints);
 
+        // findIndex: Finde Position des Users in sortierter Liste (0-basiert)
+        // + 1: Konvertiere zu 1-basiertem Rang (1 = erster Platz)
         const userRank = examRankings.findIndex((r) => r.studentId === user.id) + 1;
+        // find: Hole Eintrag des Users, dann totalPoints mit Fallback 0
         const userTotalPoints = examRankings.find((r) => r.studentId === user.id)?.totalPoints || 0;
 
         return {
@@ -58,6 +71,9 @@ export default function Profile() {
           points2: prediction?.points2,
         };
       })
+      // Sort: Sortiere nach Datum absteigend (neueste Prüfung zuerst)
+      // new Date() konvertiert String zu Date-Objekt, getTime() zu Millisekunden
+      // b - a = absteigend, a - b wäre aufsteigend
       .sort((a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime());
 
       setExamResults(results);

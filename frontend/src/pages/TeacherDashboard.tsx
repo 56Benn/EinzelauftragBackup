@@ -12,10 +12,16 @@ import { getExamStatus } from '@/lib/examUtils';
 import { Exam, Prediction } from '@/types';
 import { Plus, X, Edit, Check, Info, Lock, ClipboardList } from 'lucide-react';
 
+/**
+ * TeacherDashboard: Hauptseite für Lehrer
+ * Ermöglicht Erstellen/Bearbeiten von Prüfungen, Eintragen von Noten
+ */
 export default function TeacherDashboard() {
+  // State für Prüfungen (getrennt nach Status)
   const [exams, setExams] = useState<Exam[]>([]);
-  const [pendingExams, setPendingExams] = useState<Exam[]>([]);
-  const [gradedExams, setGradedExams] = useState<Exam[]>([]);
+  const [pendingExams, setPendingExams] = useState<Exam[]>([]); // Offene Prüfungen
+  const [gradedExams, setGradedExams] = useState<Exam[]>([]); // Benotete Prüfungen
+  // State für Formular
   const [showForm, setShowForm] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -27,7 +33,9 @@ export default function TeacherDashboard() {
     description: '',
     date: '',
   });
+  // State für Noten (wird beim Bearbeiten einer Prüfung verwendet)
   const [grades, setGrades] = useState<Record<string, number>>({});
+  // Map von Exam-ID zu Vorhersagen (für Anzeige der Vorhersagen in benoteten Prüfungen)
   const [examPredictionsMap, setExamPredictionsMap] = useState<Record<string, Prediction[]>>({});
 
   useEffect(() => {
@@ -61,11 +69,12 @@ export default function TeacherDashboard() {
     }
   }, [editingExam]);
 
+  // Lädt alle Prüfungen und trennt sie nach Status
   const loadExams = async () => {
     try {
       const allExams = await api.getAllExams();
       setExams(allExams);
-      // Separate by status instead of isClosed flag
+      // Trenne Prüfungen nach Status (nicht nur isClosed-Flag)
       const pending = allExams.filter((e) => {
         const status = getExamStatus(e);
         return status === 'open' || status === 'evaluation';
@@ -74,7 +83,7 @@ export default function TeacherDashboard() {
       setPendingExams(pending);
       setGradedExams(graded);
       
-      // Load predictions for all graded exams
+      // Lade Vorhersagen für alle benoteten Prüfungen (für Anzeige in Tabelle)
       const predictionsMap: Record<string, Prediction[]> = {};
       for (const exam of graded) {
         try {
@@ -122,6 +131,7 @@ export default function TeacherDashboard() {
     }
   };
 
+  // Speichert eine neue Prüfung oder aktualisiert eine bestehende
   const handleSaveExam = async () => {
     const finalSubject = subjectInputMode === 'input' && newSubject.trim() 
       ? newSubject.trim() 
@@ -132,13 +142,14 @@ export default function TeacherDashboard() {
       return;
     }
 
-    // If new subject was added, save it
+    // Speichere neues Fach falls erstellt
     if (subjectInputMode === 'input' && newSubject.trim()) {
       addSubject(newSubject.trim());
       loadSubjects();
     }
 
     try {
+      // Erstelle Exam-Objekt (Update oder Create)
       const exam: Exam = editingExam
         ? { ...editingExam, ...formData, subject: finalSubject, grades: { ...grades } }
         : {
@@ -151,12 +162,8 @@ export default function TeacherDashboard() {
             grades: {},
           };
 
-      // Convert grades to backend format (Long keys)
-      const backendGrades: Record<string, number> = {};
-      Object.keys(grades).forEach((key) => {
-        backendGrades[key] = grades[key];
-      });
-      exam.grades = backendGrades;
+      // Konvertiere grades für Backend (String-Keys bleiben, Backend konvertiert selbst)
+      exam.grades = grades;
 
       let savedExam: Exam;
       if (editingExam) {
@@ -165,10 +172,10 @@ export default function TeacherDashboard() {
         savedExam = await api.createExam(exam);
       }
 
-      // If grades are entered, the backend will automatically calculate points
-      // No need to manually update predictions here
+      // Backend berechnet Punkte automatisch wenn Noten eingetragen werden
 
       await loadExams();
+      // Formular zurücksetzen
       setShowForm(false);
       setEditingExam(null);
       setFormData({ title: '', subject: '', description: '', date: '' });
@@ -393,8 +400,11 @@ export default function TeacherDashboard() {
                               </TableHeader>
                               <TableBody>
                                 {students.map((student) => {
+                                  // Finde Vorhersage dieses Schülers für diese Prüfung
                                   const prediction = predictions.find((p) => p.studentId === student.id);
+                                  // ?. (Optional Chaining): Nur zugreifen wenn exam.grades existiert
                                   const grade = exam.grades?.[student.id];
+                                  // ?? (Nullish Coalescing): Verwende gespeicherte Punkte oder berechne sie
                                   const points1 = prediction?.points1 ?? calculatePredictionPoints(prediction?.prediction1, grade);
                                   const points2 = prediction?.points2 ?? calculatePredictionPoints(prediction?.prediction2, grade);
                                   return (
@@ -405,6 +415,8 @@ export default function TeacherDashboard() {
                                           <div className="flex items-center gap-2">
                                             <span className="font-semibold">{formatGrade(prediction.prediction1)}</span>
                                             {points1 !== undefined && (
+                                              // Template Literal mit ternären Operatoren für dynamische CSS-Klassen
+                                              // Farben basierend auf Punkten: >=4 = grün, >=2 = orange, sonst rot
                                               <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
                                                 points1 >= 4 ? 'bg-green-100 text-green-700' :
                                                 points1 >= 2 ? 'bg-orange-100 text-orange-700' :
@@ -423,6 +435,7 @@ export default function TeacherDashboard() {
                                           <div className="flex items-center gap-2">
                                             <span className="font-semibold">{formatGrade(prediction.prediction2)}</span>
                                             {points2 !== undefined && (
+                                              // Gleiche Farb-Logik wie bei points1
                                               <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
                                                 points2 >= 4 ? 'bg-green-100 text-green-700' :
                                                 points2 >= 2 ? 'bg-orange-100 text-orange-700' :
@@ -437,6 +450,7 @@ export default function TeacherDashboard() {
                                         )}
                                       </TableCell>
                                       <TableCell className="font-semibold py-2.5 text-sm">
+                                        {/* Ternärer Operator: Wenn Note vorhanden, formatiere sie, sonst zeige "-" */}
                                         {grade !== undefined ? formatGrade(grade) : <span className="text-slate-400">-</span>}
                                       </TableCell>
                                     </TableRow>
